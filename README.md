@@ -8,7 +8,6 @@ A VS Code extension that allows you to quickly hop between source files and thei
 - **Hop from test to source**: When viewing a test file (e.g., `useFancyHook.test.js`), hop back to the source file (e.g., `useFancyHook.js`)
 - **Multiple file patterns**: Supports `.test.js`, `.test.ts`, `.spec.js`, `.spec.ts`, and more
 - **Multiple extensions**: Works with `.js`, `.jsx`, `.ts`, `.tsx`, `.mjs`, `.cjs`
-- **Test directory support**: Finds tests in `__tests__`, `tests`, or `test` directories
 
 ## Usage
 
