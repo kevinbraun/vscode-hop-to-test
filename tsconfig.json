@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2020",
+    "outDir": "out",
+    "lib": ["ES2020"],
+    "sourceMap": true,
+    "rootDir": "src",
+    "strict": true
+  },
+  "include": ["src/**/*.ts", "src/images/**/*.png"],
+  "exclude": [
+    "node_modules",
+    ".vscode-test",
+    "src/__mocks__/**",
+    "src/__tests__/**",
+    "out",
+    "eslint.config.mts"
+  ]
+}
