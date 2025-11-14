@@ -2,7 +2,7 @@
 
 A VS Code extension that allows you to quickly hop between source files and their corresponding test files.
 
-![demo](https://github.com/user-attachments/assets/adba6c6b-22e3-4304-af34-f3d7216c1d44)
+![demo](/docs/media/demo.gif)
 
 ## Features
 
