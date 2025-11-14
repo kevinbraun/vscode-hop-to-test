@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "displayName": "Hop to Test",
   "description": "Quickly hop between source files and their related test files",
-  "publisher": "kevinbraun",
+  "publisher": "kbraun",
   "license": "MIT",
   "changelog": "CHANGELOG.md",
   "author": {
