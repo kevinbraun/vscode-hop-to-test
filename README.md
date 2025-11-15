@@ -11,6 +11,14 @@ A VS Code extension that allows you to quickly hop between source files and thei
 - **Multiple file patterns**: Supports `.test.js`, `.test.ts`, `.spec.js`, `.spec.ts`, and more
 - **Multiple extensions**: Works with `.js`, `.jsx`, `.ts`, `.tsx`, `.mjs`, `.cjs`
 
+## Installation
+
+This extension can be installed in a few different ways:
+
+- You can install the extension directly in Visual Studio Code by searching for "Hop to Test" in the extensions view
+- You can install the extension from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=kbraun.hop-to-test) in your browser
+- You can download the `.vsix` file from the [latest release on GitHub](https://github.com/kevinbraun/vscode-hop-to-test/releases/latest) and install it manually in Visual Studio Code
+
 ## Usage
 
 1. Open a source file or test file in VS Code
