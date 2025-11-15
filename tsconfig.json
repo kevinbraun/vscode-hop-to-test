@@ -15,6 +15,7 @@
     "src/__mocks__/**",
     "src/__tests__/**",
     "out",
-    "eslint.config.mts"
+    "eslint.config.mts",
+    "docs/**/*"
   ]
 }
