@@ -30,7 +30,13 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "onLanguage:vue"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -43,8 +49,7 @@
       {
         "command": "hopToTest.hop",
         "key": "ctrl+shift+t",
-        "mac": "cmd+shift+t",
-        "when": "editorLangId =~ /(javascript|javascriptreact|typescript|typescriptreact|vue)/"
+        "mac": "cmd+shift+t"
       }
     ]
   },
