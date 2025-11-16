@@ -4,20 +4,61 @@ import {
   findTestFile,
   findSourceFile,
   findLanguageConfig,
+  LanguageConfig,
 } from "../extension";
-import { LANGUAGE_CONFIGS } from "../config";
 import * as vscode from "vscode";
 
+// Default language config for testing (matches package.json default)
+const DEFAULT_LANGUAGE_CONFIG: LanguageConfig = {
+  sourcePatterns: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue"],
+  testPatterns: [
+    ".test.js",
+    ".test.jsx",
+    ".test.ts",
+    ".test.tsx",
+    ".spec.js",
+    ".spec.jsx",
+    ".spec.ts",
+    ".spec.tsx",
+  ],
+};
+
+const DEFAULT_EXCLUDE_PATTERN =
+  "**/{node_modules,dist,build,.git,.vscode,coverage}/**";
+
 // Mock vscode workspace
-jest.mock("vscode", () => ({
-  ...jest.requireActual("vscode"),
-  workspace: {
-    ...jest.requireActual("vscode").workspace,
-    findFiles: jest.fn(),
-  },
-}));
+jest.mock("vscode", () => {
+  const actualVscode = jest.requireActual("vscode");
+  return {
+    ...actualVscode,
+    workspace: {
+      ...actualVscode.workspace,
+      findFiles: jest.fn(),
+      getConfiguration: jest.fn(),
+    },
+  };
+});
 
 describe("findLanguageConfig", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Mock getConfiguration to return default language configs
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      get: jest.fn((key: string) => {
+        if (key === "languageConfigs") {
+          return [
+            {
+              sourcePatterns: ".js, .jsx, .ts, .tsx, .mjs, .cjs, .vue",
+              testPatterns:
+                ".test.js, .test.jsx, .test.ts, .test.tsx, .spec.js, .spec.jsx, .spec.ts, .spec.tsx",
+            },
+          ];
+        }
+        return undefined;
+      }),
+    });
+  });
+
   it("should find config for .js source files", () => {
     const config = findLanguageConfig("/path/to/Component.js");
     expect(config).not.toBeNull();
@@ -46,9 +87,57 @@ describe("findLanguageConfig", () => {
     const config = findLanguageConfig("/path/to/Component.java");
     expect(config).toBeNull();
   });
+
+  it("should handle undefined languageConfigs gracefully", () => {
+    // Mock getConfiguration to return undefined for languageConfigs
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      get: jest.fn(() => {
+        return undefined;
+      }),
+    });
+
+    // Should not crash and should return null when no configs are available
+    const config = findLanguageConfig("/path/to/Component.js");
+    expect(config).toBeNull();
+  });
+
+  it("should handle empty languageConfigs array gracefully", () => {
+    // Mock getConfiguration to return empty array for languageConfigs
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      get: jest.fn((key: string) => {
+        if (key === "languageConfigs") {
+          return [];
+        }
+        return undefined;
+      }),
+    });
+
+    // Should not crash and should return null when configs array is empty
+    const config = findLanguageConfig("/path/to/Component.js");
+    expect(config).toBeNull();
+  });
 });
 
 describe("isTestFile", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Mock getConfiguration to return default language configs
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      get: jest.fn((key: string) => {
+        if (key === "languageConfigs") {
+          return [
+            {
+              sourcePatterns: ".js, .jsx, .ts, .tsx, .mjs, .cjs, .vue",
+              testPatterns:
+                ".test.js, .test.jsx, .test.ts, .test.tsx, .spec.js, .spec.jsx, .spec.ts, .spec.tsx",
+            },
+          ];
+        }
+        return undefined;
+      }),
+    });
+  });
+
   it("should identify .test.js files", () => {
     expect(isTestFile("/path/to/Component.test.js")).toBe(true);
     expect(isTestFile("/path/to/useHook.test.js")).toBe(true);
@@ -75,14 +164,6 @@ describe("isTestFile", () => {
     expect(isTestFile("/path/to/Component.spec.ts")).toBe(true);
   });
 
-  it("should identify .test.mjs files", () => {
-    expect(isTestFile("/path/to/Component.test.mjs")).toBe(true);
-  });
-
-  it("should identify .test.cjs files", () => {
-    expect(isTestFile("/path/to/Component.test.cjs")).toBe(true);
-  });
-
   it("should be case insensitive", () => {
     expect(isTestFile("/path/to/Component.TEST.JS")).toBe(true);
     expect(isTestFile("/path/to/Component.Spec.Ts")).toBe(true);
@@ -102,7 +183,7 @@ describe("isTestFile", () => {
 });
 
 describe("getBaseNameFromFile", () => {
-  const jsConfig = LANGUAGE_CONFIGS[0];
+  const jsConfig = DEFAULT_LANGUAGE_CONFIG;
 
   describe("with test patterns", () => {
     it("should extract base name from .test.js files", () => {
@@ -173,26 +254,6 @@ describe("getBaseNameFromFile", () => {
       expect(
         getBaseNameFromFile(
           "/path/to/Component.spec.ts",
-          jsConfig,
-          jsConfig.testPatterns
-        )
-      ).toBe("Component");
-    });
-
-    it("should extract base name from .test.mjs files", () => {
-      expect(
-        getBaseNameFromFile(
-          "/path/to/Component.test.mjs",
-          jsConfig,
-          jsConfig.testPatterns
-        )
-      ).toBe("Component");
-    });
-
-    it("should extract base name from .test.cjs files", () => {
-      expect(
-        getBaseNameFromFile(
-          "/path/to/Component.test.cjs",
           jsConfig,
           jsConfig.testPatterns
         )
@@ -328,6 +389,24 @@ describe("getBaseNameFromFile", () => {
 describe("findTestFile", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock getConfiguration to return default language configs
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      get: jest.fn((key: string) => {
+        if (key === "languageConfigs") {
+          return [
+            {
+              sourcePatterns: ".js, .jsx, .ts, .tsx, .mjs, .cjs, .vue",
+              testPatterns:
+                ".test.js, .test.jsx, .test.ts, .test.tsx, .spec.js, .spec.jsx, .spec.ts, .spec.tsx",
+            },
+          ];
+        }
+        if (key === "excludeFilePattern") {
+          return DEFAULT_EXCLUDE_PATTERN;
+        }
+        return undefined;
+      }),
+    });
   });
 
   it("should find test file in the same directory", async () => {
@@ -343,7 +422,11 @@ describe("findTestFile", () => {
       }
     );
 
-    const result = await findTestFile(sourcePath);
+    const result = await findTestFile(
+      sourcePath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(testPath);
@@ -362,7 +445,11 @@ describe("findTestFile", () => {
       }
     );
 
-    const result = await findTestFile(sourcePath);
+    const result = await findTestFile(
+      sourcePath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(testPath);
@@ -381,7 +468,11 @@ describe("findTestFile", () => {
       }
     );
 
-    const result = await findTestFile(sourcePath);
+    const result = await findTestFile(
+      sourcePath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(testPath);
@@ -400,7 +491,11 @@ describe("findTestFile", () => {
       }
     );
 
-    const result = await findTestFile(sourcePath);
+    const result = await findTestFile(
+      sourcePath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(testPath);
@@ -419,7 +514,11 @@ describe("findTestFile", () => {
       }
     );
 
-    const result = await findTestFile(sourcePath);
+    const result = await findTestFile(
+      sourcePath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(testPath);
@@ -438,7 +537,11 @@ describe("findTestFile", () => {
       }
     );
 
-    const result = await findTestFile(sourcePath);
+    const result = await findTestFile(
+      sourcePath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(testPath);
@@ -449,47 +552,13 @@ describe("findTestFile", () => {
 
     (vscode.workspace.findFiles as jest.Mock).mockResolvedValue([]);
 
-    const result = await findTestFile(sourcePath);
+    const result = await findTestFile(
+      sourcePath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).toBeNull();
-  });
-
-  it("should check .test.mjs for .mjs source files", async () => {
-    const sourcePath = "/project/src/Component.mjs";
-    const testPath = "/project/src/Component.test.mjs";
-
-    (vscode.workspace.findFiles as jest.Mock).mockImplementation(
-      async (pattern: string) => {
-        if (pattern.includes("Component.test.mjs")) {
-          return [vscode.Uri.file(testPath)];
-        }
-        return [];
-      }
-    );
-
-    const result = await findTestFile(sourcePath);
-
-    expect(result).not.toBeNull();
-    expect(result?.fsPath).toBe(testPath);
-  });
-
-  it("should check .test.cjs for .cjs source files", async () => {
-    const sourcePath = "/project/src/Component.cjs";
-    const testPath = "/project/src/Component.test.cjs";
-
-    (vscode.workspace.findFiles as jest.Mock).mockImplementation(
-      async (pattern: string) => {
-        if (pattern.includes("Component.test.cjs")) {
-          return [vscode.Uri.file(testPath)];
-        }
-        return [];
-      }
-    );
-
-    const result = await findTestFile(sourcePath);
-
-    expect(result).not.toBeNull();
-    expect(result?.fsPath).toBe(testPath);
   });
 
   it("should find .spec.ts file for .js source (bidirectional hopping)", async () => {
@@ -505,7 +574,11 @@ describe("findTestFile", () => {
       }
     );
 
-    const result = await findTestFile(sourcePath);
+    const result = await findTestFile(
+      sourcePath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(testPath);
@@ -524,7 +597,11 @@ describe("findTestFile", () => {
       }
     );
 
-    const result = await findTestFile(sourcePath);
+    const result = await findTestFile(
+      sourcePath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(testPath);
@@ -534,6 +611,24 @@ describe("findTestFile", () => {
 describe("findSourceFile", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock getConfiguration to return default language configs
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      get: jest.fn((key: string) => {
+        if (key === "languageConfigs") {
+          return [
+            {
+              sourcePatterns: ".js, .jsx, .ts, .tsx, .mjs, .cjs, .vue",
+              testPatterns:
+                ".test.js, .test.jsx, .test.ts, .test.tsx, .spec.js, .spec.jsx, .spec.ts, .spec.tsx",
+            },
+          ];
+        }
+        if (key === "excludeFilePattern") {
+          return DEFAULT_EXCLUDE_PATTERN;
+        }
+        return undefined;
+      }),
+    });
   });
 
   it("should find source file in the same directory", async () => {
@@ -549,7 +644,11 @@ describe("findSourceFile", () => {
       }
     );
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(sourcePath);
@@ -568,7 +667,11 @@ describe("findSourceFile", () => {
       }
     );
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(sourcePath);
@@ -587,7 +690,11 @@ describe("findSourceFile", () => {
       }
     );
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(sourcePath);
@@ -606,7 +713,11 @@ describe("findSourceFile", () => {
       }
     );
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(sourcePath);
@@ -627,7 +738,11 @@ describe("findSourceFile", () => {
       }
     );
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(sourcePath);
@@ -638,7 +753,11 @@ describe("findSourceFile", () => {
 
     (vscode.workspace.findFiles as jest.Mock).mockResolvedValue([]);
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).toBeNull();
   });
@@ -656,7 +775,11 @@ describe("findSourceFile", () => {
       }
     );
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(sourcePath);
@@ -675,7 +798,11 @@ describe("findSourceFile", () => {
       }
     );
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(sourcePath);
@@ -694,7 +821,11 @@ describe("findSourceFile", () => {
       }
     );
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(sourcePath);
@@ -713,7 +844,11 @@ describe("findSourceFile", () => {
       }
     );
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(sourcePath);
@@ -732,7 +867,11 @@ describe("findSourceFile", () => {
       }
     );
 
-    const result = await findSourceFile(testPath);
+    const result = await findSourceFile(
+      testPath,
+      DEFAULT_LANGUAGE_CONFIG,
+      DEFAULT_EXCLUDE_PATTERN
+    );
 
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(sourcePath);

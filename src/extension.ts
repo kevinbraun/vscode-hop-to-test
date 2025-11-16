@@ -1,10 +1,19 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import {
-  EXCLUDE_FILE_PATTERN,
-  LANGUAGE_CONFIGS,
-  LanguageConfig,
-} from "./config";
+
+/**
+ * Language configuration for file/test pattern matching
+ */
+export interface LanguageConfig {
+  sourcePatterns: string[];
+  testPatterns: string[];
+}
+
+/** The user-configurable language configuration entry - uses a comma separated string for sourcePatterns and testPatterns */
+export interface LanguageConfigEntry {
+  sourcePatterns: string;
+  testPatterns: string;
+}
 
 /**
  * Finds the language configuration that matches a given file path
@@ -12,7 +21,28 @@ import {
 export function findLanguageConfig(filePath: string): LanguageConfig | null {
   const fileName = path.basename(filePath).toLowerCase();
 
-  for (const config of LANGUAGE_CONFIGS) {
+  // Get the user-configurable language configuration entries and convert them to LanguageConfig[]
+  let userSettingConfigEntries = vscode.workspace
+    .getConfiguration("hopToTest")
+    .get("languageConfigs") as LanguageConfigEntry[] | undefined;
+
+  // ensure userSettingConfigEntries is an array
+  userSettingConfigEntries = userSettingConfigEntries || [];
+
+  const languageConfigs = userSettingConfigEntries.map(
+    (entry: LanguageConfigEntry) => {
+      return {
+        sourcePatterns: entry.sourcePatterns
+          .split(",")
+          .map((pattern) => pattern.trim()),
+        testPatterns: entry.testPatterns
+          .split(",")
+          .map((pattern) => pattern.trim()),
+      };
+    }
+  ) as LanguageConfig[];
+
+  for (const config of languageConfigs) {
     // Check if file matches any source pattern
     const matchesSource = config.sourcePatterns.some((pattern) => {
       return fileName.endsWith(pattern.toLowerCase());
@@ -20,7 +50,7 @@ export function findLanguageConfig(filePath: string): LanguageConfig | null {
 
     // Check if file matches any test pattern
     const matchesTest = config.testPatterns.some((pattern) => {
-      return fileName.includes(pattern.toLowerCase());
+      return fileName.endsWith(pattern.toLowerCase());
     });
 
     if (matchesSource || matchesTest) {
@@ -86,17 +116,14 @@ export function getBaseNameFromFile(
  * Can find any test pattern for any source pattern within the same language config
  */
 export async function findTestFile(
-  sourceFilePath: string
+  sourceFilePath: string,
+  config: LanguageConfig,
+  excludeFilePattern: string
 ): Promise<vscode.Uri | null> {
-  const config = findLanguageConfig(sourceFilePath);
-  if (!config) {
-    return null;
-  }
-
   const baseName = getBaseNameFromFile(
     sourceFilePath,
     config,
-    config?.sourcePatterns ?? []
+    config.sourcePatterns
   );
 
   // Search for all test patterns in the config
@@ -104,7 +131,7 @@ export async function findTestFile(
     const pattern = `**/${baseName}${testPattern}`;
     const files = await vscode.workspace.findFiles(
       pattern,
-      EXCLUDE_FILE_PATTERN,
+      excludeFilePattern,
       1 // Limit to 1 result for performance
     );
 
@@ -121,13 +148,10 @@ export async function findTestFile(
  * Can find any source pattern for any test pattern within the same language config
  */
 export async function findSourceFile(
-  testFilePath: string
+  testFilePath: string,
+  config: LanguageConfig,
+  excludeFilePattern: string
 ): Promise<vscode.Uri | null> {
-  const config = findLanguageConfig(testFilePath);
-  if (!config) {
-    return null;
-  }
-
   const baseName = getBaseNameFromFile(
     testFilePath,
     config,
@@ -139,7 +163,7 @@ export async function findSourceFile(
     const pattern = `**/${baseName}${sourcePattern}`;
     const files = await vscode.workspace.findFiles(
       pattern,
-      EXCLUDE_FILE_PATTERN,
+      excludeFilePattern,
       1 // Limit to 1 result for performance
     );
 
@@ -164,6 +188,10 @@ async function jumpToTestOrSource() {
 
   const currentFile = editor.document.uri.fsPath;
 
+  const excludeFilePattern = vscode.workspace
+    .getConfiguration("hopToTest")
+    .get("excludeFilePattern") as string;
+
   // Check if file matches any language config
   const config = findLanguageConfig(currentFile);
   if (!config) {
@@ -177,7 +205,7 @@ async function jumpToTestOrSource() {
 
   if (isTestFile(currentFile)) {
     // We're in a test file, find the source file
-    targetFile = await findSourceFile(currentFile);
+    targetFile = await findSourceFile(currentFile, config, excludeFilePattern);
     if (!targetFile) {
       displayMessage(
         `Could not find source file for ${path.basename(currentFile)}`
@@ -186,7 +214,7 @@ async function jumpToTestOrSource() {
     }
   } else {
     // We're in a source file, find the test file
-    targetFile = await findTestFile(currentFile);
+    targetFile = await findTestFile(currentFile, config, excludeFilePattern);
     if (!targetFile) {
       displayMessage(
         `Could not find test file for ${path.basename(currentFile)}`

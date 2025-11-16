@@ -54,7 +54,48 @@
         "key": "ctrl+shift+t",
         "mac": "cmd+shift+t"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Hop to Test",
+      "type": "object",
+      "properties": {
+        "hopToTest.excludeFilePattern": {
+          "type": "string",
+          "markdownDescription": "File pattern to exclude from search when finding related test/source files.",
+          "default": "**/{node_modules,dist,build,.git,.vscode,coverage}/**"
+        },
+        "hopToTest.languageConfigs": {
+          "type": "array",
+          "markdownDescription": "Defines groups of related file types that can hop between each other.\n\nEach configuration entry creates a bidirectional mapping: when you're in any file matching `sourcePatterns`, you can hop to any file matching `testPatterns` (and vice versa). The extension extracts the base filename and searches for matches across all patterns in the group.\n\nFor example, with `.js` and `.test.js` in the same config, opening `Component.js` will find `Component.test.js`, and opening `Component.test.js` will find `Component.js`.\n\nExample:\n\n```json\n[{\n\t\"sourcePatterns\": \".js, .jsx, .ts, .tsx, .mjs, .cjs, .vue\",\n\t\"testPatterns\": \".test.js, .test.jsx, .test.ts, .test.tsx, .spec.js, .spec.jsx, .spec.ts, .spec.tsx\" \n}]\n```",
+          "items": {
+            "type": "object",
+            "required": [
+              "sourcePatterns",
+              "testPatterns"
+            ],
+            "properties": {
+              "sourcePatterns": {
+                "type": "string"
+              },
+              "testPatterns": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": [
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "default": [
+            {
+              "sourcePatterns": ".js, .jsx, .ts, .tsx, .mjs, .cjs, .vue",
+              "testPatterns": ".test.js, .test.jsx, .test.ts, .test.tsx, .spec.js, .spec.jsx, .spec.ts, .spec.tsx"
+            }
+          ]
+        }
+      }
+    }
   },
   "scripts": {
     "lint": "eslint .",
