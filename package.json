@@ -20,9 +20,12 @@
   "homepage": "https://github.com/kevinbraun/vscode-hop-to-test",
   "icon": "extension-icon.png",
   "keywords": [
-    "vscode",
-    "extension",
-    "test"
+    "test",
+    "testing",
+    "test files",
+    "jump to test",
+    "related test",
+    "hop to test"
   ],
   "engines": {
     "vscode": "^1.74.0"

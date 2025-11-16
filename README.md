@@ -13,11 +13,11 @@ A VS Code extension that allows you to quickly hop between source files and thei
 
 ## Installation
 
-This extension can be installed in a few different ways:
+This extension is available in the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=kbraun.hop-to-test) and the [Open VSX Registry](https://open-vsx.org/extension/kbraun/hop-to-test). It can be installed in a few ways:
 
-- You can install the extension directly in Visual Studio Code by searching for "Hop to Test" in the extensions view
-- You can install the extension from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=kbraun.hop-to-test) in your browser
-- You can download the `.vsix` file from the [latest release on GitHub](https://github.com/kevinbraun/vscode-hop-to-test/releases/latest) and install it manually in Visual Studio Code
+- You can install the extension directly in Visual Studio Code/Cursor/Windsurf/etc by searching for "Hop to Test" in the extensions view
+- You can install the extension from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=kbraun.hop-to-test) or the [Open VSX Registry](https://open-vsx.org/extension/kbraun/hop-to-test) in your browser
+- You can download the `.vsix` file from the [latest release on GitHub](https://github.com/kevinbraun/vscode-hop-to-test/releases/latest) and install it manually in your editor
 
 ## Usage
 
