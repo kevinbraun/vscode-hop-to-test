@@ -57,7 +57,7 @@
     "lint": "eslint .",
     "pretest": "npm run lint",
     "vscode:prepublish": "npm run compile",
-    "vscode:package": "vsce package",
+    "vscode:package": "vsce package --out build",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "test": "jest",

@@ -1,4 +1,6 @@
 out/
+build/*
+!build/.gitkeep
 node_modules
 .vscode-test/
 *.vsix
