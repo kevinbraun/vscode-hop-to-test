@@ -1,22 +1,52 @@
-// import * as path from "path";
-
 import {
   isTestFile,
-  getBaseNameFromTestFile,
-  getBaseNameFromSourceFile,
-  getFileDirectory,
+  getBaseNameFromFile,
   findTestFile,
   findSourceFile,
+  findLanguageConfig,
 } from "../extension";
+import { LANGUAGE_CONFIGS } from "../config";
 import * as vscode from "vscode";
 
 // Mock vscode workspace
 jest.mock("vscode", () => ({
   ...jest.requireActual("vscode"),
   workspace: {
+    ...jest.requireActual("vscode").workspace,
     findFiles: jest.fn(),
   },
 }));
+
+describe("findLanguageConfig", () => {
+  it("should find config for .js source files", () => {
+    const config = findLanguageConfig("/path/to/Component.js");
+    expect(config).not.toBeNull();
+    expect(config?.sourcePatterns).toContain(".js");
+  });
+
+  it("should find config for .ts source files", () => {
+    const config = findLanguageConfig("/path/to/Component.ts");
+    expect(config).not.toBeNull();
+    expect(config?.sourcePatterns).toContain(".ts");
+  });
+
+  it("should find config for .test.js files", () => {
+    const config = findLanguageConfig("/path/to/Component.test.js");
+    expect(config).not.toBeNull();
+    expect(config?.testPatterns).toContain(".test.js");
+  });
+
+  it("should find config for .spec.ts files", () => {
+    const config = findLanguageConfig("/path/to/Component.spec.ts");
+    expect(config).not.toBeNull();
+    expect(config?.testPatterns).toContain(".spec.ts");
+  });
+
+  it("should return null for unsupported file types", () => {
+    const config = findLanguageConfig("/path/to/Component.java");
+    expect(config).toBeNull();
+  });
+});
 
 describe("isTestFile", () => {
   it("should identify .test.js files", () => {
@@ -71,126 +101,227 @@ describe("isTestFile", () => {
   });
 });
 
-describe("getBaseNameFromTestFile", () => {
-  it("should extract base name from .test.js files", () => {
-    expect(getBaseNameFromTestFile("/path/to/Component.test.js")).toBe(
-      "Component"
-    );
-    expect(getBaseNameFromTestFile("/path/to/useFancyHook.test.js")).toBe(
-      "useFancyHook"
-    );
+describe("getBaseNameFromFile", () => {
+  const jsConfig = LANGUAGE_CONFIGS[0];
+
+  describe("with test patterns", () => {
+    it("should extract base name from .test.js files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.test.js",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("Component");
+      expect(
+        getBaseNameFromFile(
+          "/path/to/useFancyHook.test.js",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("useFancyHook");
+    });
+
+    it("should extract base name from .test.ts files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.test.ts",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("Component");
+      expect(
+        getBaseNameFromFile(
+          "/path/to/useFancyHook.test.ts",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("useFancyHook");
+    });
+
+    it("should extract base name from .test.jsx files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/MyComponent.test.jsx",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("MyComponent");
+    });
+
+    it("should extract base name from .test.tsx files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/MyComponent.test.tsx",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("MyComponent");
+    });
+
+    it("should extract base name from .spec.js files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.spec.js",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("Component");
+    });
+
+    it("should extract base name from .spec.ts files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.spec.ts",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("Component");
+    });
+
+    it("should extract base name from .test.mjs files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.test.mjs",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("Component");
+    });
+
+    it("should extract base name from .test.cjs files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.test.cjs",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("Component");
+    });
+
+    it("should be case insensitive", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.TEST.JS",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("Component");
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.Spec.Ts",
+          jsConfig,
+          jsConfig.testPatterns
+        )
+      ).toBe("Component");
+    });
   });
 
-  it("should extract base name from .test.ts files", () => {
-    expect(getBaseNameFromTestFile("/path/to/Component.test.ts")).toBe(
-      "Component"
-    );
-    expect(getBaseNameFromTestFile("/path/to/useFancyHook.test.ts")).toBe(
-      "useFancyHook"
-    );
+  describe("with source patterns", () => {
+    it("should extract base name from .js files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.js",
+          jsConfig,
+          jsConfig.sourcePatterns
+        )
+      ).toBe("Component");
+      expect(
+        getBaseNameFromFile(
+          "/path/to/useFancyHook.js",
+          jsConfig,
+          jsConfig.sourcePatterns
+        )
+      ).toBe("useFancyHook");
+    });
+
+    it("should extract base name from .ts files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.ts",
+          jsConfig,
+          jsConfig.sourcePatterns
+        )
+      ).toBe("Component");
+      expect(
+        getBaseNameFromFile(
+          "/path/to/useFancyHook.ts",
+          jsConfig,
+          jsConfig.sourcePatterns
+        )
+      ).toBe("useFancyHook");
+    });
+
+    it("should extract base name from .jsx files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/MyComponent.jsx",
+          jsConfig,
+          jsConfig.sourcePatterns
+        )
+      ).toBe("MyComponent");
+    });
+
+    it("should extract base name from .tsx files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/MyComponent.tsx",
+          jsConfig,
+          jsConfig.sourcePatterns
+        )
+      ).toBe("MyComponent");
+    });
+
+    it("should extract base name from .mjs files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.mjs",
+          jsConfig,
+          jsConfig.sourcePatterns
+        )
+      ).toBe("Component");
+    });
+
+    it("should extract base name from .cjs files", () => {
+      expect(
+        getBaseNameFromFile(
+          "/path/to/Component.cjs",
+          jsConfig,
+          jsConfig.sourcePatterns
+        )
+      ).toBe("Component");
+    });
+
+    it("should match source patterns at the end, not first occurrence", () => {
+      // Edge case: filename contains pattern multiple times
+      // Should match the last occurrence (at the end), not the first
+      expect(
+        getBaseNameFromFile(
+          "/path/to/foo.js.js",
+          jsConfig,
+          jsConfig.sourcePatterns
+        )
+      ).toBe("foo.js");
+      expect(
+        getBaseNameFromFile(
+          "/path/to/bar.ts.ts",
+          jsConfig,
+          jsConfig.sourcePatterns
+        )
+      ).toBe("bar.ts");
+    });
   });
 
-  it("should extract base name from .test.jsx files", () => {
-    expect(getBaseNameFromTestFile("/path/to/MyComponent.test.jsx")).toBe(
-      "MyComponent"
-    );
-  });
-
-  it("should extract base name from .test.tsx files", () => {
-    expect(getBaseNameFromTestFile("/path/to/MyComponent.test.tsx")).toBe(
-      "MyComponent"
-    );
-  });
-
-  it("should extract base name from .spec.js files", () => {
-    expect(getBaseNameFromTestFile("/path/to/Component.spec.js")).toBe(
-      "Component"
-    );
-  });
-
-  it("should extract base name from .spec.ts files", () => {
-    expect(getBaseNameFromTestFile("/path/to/Component.spec.ts")).toBe(
-      "Component"
-    );
-  });
-
-  it("should extract base name from .test.mjs files", () => {
-    expect(getBaseNameFromTestFile("/path/to/Component.test.mjs")).toBe(
-      "Component"
-    );
-  });
-
-  it("should extract base name from .test.cjs files", () => {
-    expect(getBaseNameFromTestFile("/path/to/Component.test.cjs")).toBe(
-      "Component"
-    );
-  });
-
-  it("should be case insensitive", () => {
-    expect(getBaseNameFromTestFile("/path/to/Component.TEST.JS")).toBe(
-      "Component"
-    );
-    expect(getBaseNameFromTestFile("/path/to/Component.Spec.Ts")).toBe(
-      "Component"
-    );
-  });
-});
-
-describe("getBaseNameFromSourceFile", () => {
-  it("should extract base name from .js files", () => {
-    expect(getBaseNameFromSourceFile("/path/to/Component.js")).toBe(
-      "Component"
-    );
-    expect(getBaseNameFromSourceFile("/path/to/useFancyHook.js")).toBe(
-      "useFancyHook"
-    );
-  });
-
-  it("should extract base name from .ts files", () => {
-    expect(getBaseNameFromSourceFile("/path/to/Component.ts")).toBe(
-      "Component"
-    );
-    expect(getBaseNameFromSourceFile("/path/to/useFancyHook.ts")).toBe(
-      "useFancyHook"
-    );
-  });
-
-  it("should extract base name from .jsx files", () => {
-    expect(getBaseNameFromSourceFile("/path/to/MyComponent.jsx")).toBe(
-      "MyComponent"
-    );
-  });
-
-  it("should extract base name from .tsx files", () => {
-    expect(getBaseNameFromSourceFile("/path/to/MyComponent.tsx")).toBe(
-      "MyComponent"
-    );
-  });
-
-  it("should extract base name from .mjs files", () => {
-    expect(getBaseNameFromSourceFile("/path/to/Component.mjs")).toBe(
-      "Component"
-    );
-  });
-
-  it("should extract base name from .cjs files", () => {
-    expect(getBaseNameFromSourceFile("/path/to/Component.cjs")).toBe(
-      "Component"
-    );
-  });
-});
-
-describe("getFileDirectory", () => {
-  it("should return the directory of a file", () => {
-    expect(getFileDirectory("/path/to/Component.js")).toBe("/path/to");
-    expect(getFileDirectory("/path/to/subdir/Component.js")).toBe(
-      "/path/to/subdir"
-    );
-  });
-
-  it("should handle relative paths", () => {
-    expect(getFileDirectory("./Component.js")).toBe(".");
-    expect(getFileDirectory("../Component.js")).toBe("..");
+  describe("with null config", () => {
+    it("should fallback to filename without extension", () => {
+      expect(getBaseNameFromFile("/path/to/Component.js", null, [])).toBe(
+        "Component"
+      );
+      // When config is null, it only removes the last extension
+      expect(getBaseNameFromFile("/path/to/Component.test.js", null, [])).toBe(
+        "Component.test"
+      );
+    });
   });
 });
 
@@ -360,6 +491,44 @@ describe("findTestFile", () => {
     expect(result).not.toBeNull();
     expect(result?.fsPath).toBe(testPath);
   });
+
+  it("should find .spec.ts file for .js source (bidirectional hopping)", async () => {
+    const sourcePath = "/project/src/SomeComponent.js";
+    const testPath = "/project/src/SomeComponent.spec.ts";
+
+    (vscode.workspace.findFiles as jest.Mock).mockImplementation(
+      async (pattern: string) => {
+        if (pattern.includes("SomeComponent.spec.ts")) {
+          return [vscode.Uri.file(testPath)];
+        }
+        return [];
+      }
+    );
+
+    const result = await findTestFile(sourcePath);
+
+    expect(result).not.toBeNull();
+    expect(result?.fsPath).toBe(testPath);
+  });
+
+  it("should find .test.tsx file for .jsx source (bidirectional hopping)", async () => {
+    const sourcePath = "/project/src/MyComponent.jsx";
+    const testPath = "/project/src/MyComponent.test.tsx";
+
+    (vscode.workspace.findFiles as jest.Mock).mockImplementation(
+      async (pattern: string) => {
+        if (pattern.includes("MyComponent.test.tsx")) {
+          return [vscode.Uri.file(testPath)];
+        }
+        return [];
+      }
+    );
+
+    const result = await findTestFile(sourcePath);
+
+    expect(result).not.toBeNull();
+    expect(result?.fsPath).toBe(testPath);
+  });
 });
 
 describe("findSourceFile", () => {
@@ -500,6 +669,63 @@ describe("findSourceFile", () => {
     (vscode.workspace.findFiles as jest.Mock).mockImplementation(
       async (pattern: string) => {
         if (pattern.includes("Component.mjs")) {
+          return [vscode.Uri.file(sourcePath)];
+        }
+        return [];
+      }
+    );
+
+    const result = await findSourceFile(testPath);
+
+    expect(result).not.toBeNull();
+    expect(result?.fsPath).toBe(sourcePath);
+  });
+
+  it("should find .js source file for .spec.ts test (bidirectional hopping - fixes issue #1)", async () => {
+    const testPath = "/project/src/SomeComponent.spec.ts";
+    const sourcePath = "/project/src/SomeComponent.js";
+
+    (vscode.workspace.findFiles as jest.Mock).mockImplementation(
+      async (pattern: string) => {
+        if (pattern.includes("SomeComponent.js")) {
+          return [vscode.Uri.file(sourcePath)];
+        }
+        return [];
+      }
+    );
+
+    const result = await findSourceFile(testPath);
+
+    expect(result).not.toBeNull();
+    expect(result?.fsPath).toBe(sourcePath);
+  });
+
+  it("should find .jsx source file for .test.tsx test (bidirectional hopping)", async () => {
+    const testPath = "/project/src/MyComponent.test.tsx";
+    const sourcePath = "/project/src/MyComponent.jsx";
+
+    (vscode.workspace.findFiles as jest.Mock).mockImplementation(
+      async (pattern: string) => {
+        if (pattern.includes("MyComponent.jsx")) {
+          return [vscode.Uri.file(sourcePath)];
+        }
+        return [];
+      }
+    );
+
+    const result = await findSourceFile(testPath);
+
+    expect(result).not.toBeNull();
+    expect(result?.fsPath).toBe(sourcePath);
+  });
+
+  it("should find .ts source file for .spec.js test (bidirectional hopping)", async () => {
+    const testPath = "/project/src/Component.spec.js";
+    const sourcePath = "/project/src/Component.ts";
+
+    (vscode.workspace.findFiles as jest.Mock).mockImplementation(
+      async (pattern: string) => {
+        if (pattern.includes("Component.ts")) {
           return [vscode.Uri.file(sourcePath)];
         }
         return [];

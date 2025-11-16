@@ -1,96 +1,110 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import {
+  EXCLUDE_FILE_PATTERN,
+  LANGUAGE_CONFIGS,
+  LanguageConfig,
+} from "./config";
 
 /**
- * Checks if a file path matches common test file patterns
+ * Finds the language configuration that matches a given file path
+ */
+export function findLanguageConfig(filePath: string): LanguageConfig | null {
+  const fileName = path.basename(filePath).toLowerCase();
+
+  for (const config of LANGUAGE_CONFIGS) {
+    // Check if file matches any source pattern
+    const matchesSource = config.sourcePatterns.some((pattern) => {
+      return fileName.endsWith(pattern.toLowerCase());
+    });
+
+    // Check if file matches any test pattern
+    const matchesTest = config.testPatterns.some((pattern) => {
+      return fileName.includes(pattern.toLowerCase());
+    });
+
+    if (matchesSource || matchesTest) {
+      return config;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Checks if a file path matches any test file pattern from the language configs
  */
 export function isTestFile(filePath: string): boolean {
-  const fileName = path.basename(filePath);
-  const testPatterns = [
-    /\.test\.(js|jsx|ts|tsx)$/i,
-    /\.spec\.(js|jsx|ts|tsx)$/i,
-    /\.test\.(mjs|cjs)$/i,
-    /\.spec\.(mjs|cjs)$/i,
-  ];
-  return testPatterns.some((pattern) => pattern.test(fileName));
+  const config = findLanguageConfig(filePath);
+  if (!config) {
+    return false;
+  }
+
+  const fileName = path.basename(filePath).toLowerCase();
+  return config.testPatterns.some((pattern) => {
+    return fileName.includes(pattern.toLowerCase());
+  });
 }
 
 /**
- * Extracts the base name from a test file
+ * Extracts the base name from a file using the provided source/test patterns
  * Examples:
- *   Component.test.js -> Component
- *   useFancyHook.test.ts -> useFancyHook
- *   MyComponent.spec.jsx -> MyComponent
+ *   Component.test.js -> Component (with test patterns)
+ *   Component.jsx -> Component (with source patterns)
+ *   useFancyHook.test.ts -> useFancyHook (with test patterns)
  */
-export function getBaseNameFromTestFile(filePath: string): string {
-  const fileName = path.basename(filePath);
-  // Remove .test or .spec and the extension
-  const baseName = fileName.replace(
-    /\.(test|spec)\.(js|jsx|ts|tsx|mjs|cjs)$/i,
-    ""
-  );
-  return baseName;
-}
+export function getBaseNameFromFile(
+  filePath: string,
+  config: LanguageConfig | null,
+  patterns: string[]
+): string {
+  if (!config) {
+    // Fallback: return filename without extension
+    return path.basename(filePath, path.extname(filePath));
+  }
 
-/**
- * Extracts the base name from a source file
- * Examples:
- *   Component.jsx -> Component
- *   useFancyHook.ts -> useFancyHook
- *   MyComponent.js -> MyComponent
- */
-export function getBaseNameFromSourceFile(filePath: string): string {
   const fileName = path.basename(filePath);
-  // Remove the extension
-  const baseName = fileName.replace(/\.(js|jsx|ts|tsx|mjs|cjs)$/i, "");
-  return baseName;
-}
+  const fileNameLower = fileName.toLowerCase();
 
-/**
- * Gets the directory of the current file
- */
-export function getFileDirectory(filePath: string): string {
-  return path.dirname(filePath);
+  // Try each pattern to extract the base name
+  for (const pattern of patterns) {
+    const patternLower = pattern.toLowerCase();
+
+    // For source patterns (like .js), they're at the end, so use endsWith
+    // This ensures we match the last occurrence, not the first
+    if (fileNameLower.endsWith(patternLower)) {
+      return fileName.substring(0, fileName.length - pattern.length);
+    }
+  }
+
+  // Fallback: return filename without extension
+  return path.basename(filePath, path.extname(filePath));
 }
 
 /**
  * Finds a test file for a given source file
+ * Can find any test pattern for any source pattern within the same language config
  */
 export async function findTestFile(
   sourceFilePath: string
 ): Promise<vscode.Uri | null> {
-  const baseName = getBaseNameFromSourceFile(sourceFilePath);
-  const sourceExt = path.extname(sourceFilePath);
-
-  // Common test file extensions and patterns
-  const testExtensions = [
-    ".test.js",
-    ".test.jsx",
-    ".test.ts",
-    ".test.tsx",
-    ".spec.js",
-    ".spec.jsx",
-    ".spec.ts",
-    ".spec.tsx",
-  ];
-
-  // Also check for .test.mjs, .test.cjs, etc.
-  if (sourceExt === ".mjs") {
-    testExtensions.push(".test.mjs", ".spec.mjs");
-  } else if (sourceExt === ".cjs") {
-    testExtensions.push(".test.cjs", ".spec.cjs");
+  const config = findLanguageConfig(sourceFilePath);
+  if (!config) {
+    return null;
   }
 
-  // Exclude common directories that shouldn't be searched
-  const excludePattern =
-    "**/{node_modules,dist,build,.git,.vscode,coverage}/**";
+  const baseName = getBaseNameFromFile(
+    sourceFilePath,
+    config,
+    config?.sourcePatterns ?? []
+  );
 
-  // Search the entire workspace using glob patterns
-  for (const ext of testExtensions) {
-    const pattern = `**/${baseName}${ext}`;
+  // Search for all test patterns in the config
+  for (const testPattern of config.testPatterns) {
+    const pattern = `**/${baseName}${testPattern}`;
     const files = await vscode.workspace.findFiles(
       pattern,
-      excludePattern,
+      EXCLUDE_FILE_PATTERN,
       1 // Limit to 1 result for performance
     );
 
@@ -104,31 +118,28 @@ export async function findTestFile(
 
 /**
  * Finds a source file for a given test file
+ * Can find any source pattern for any test pattern within the same language config
  */
 export async function findSourceFile(
   testFilePath: string
 ): Promise<vscode.Uri | null> {
-  const baseName = getBaseNameFromTestFile(testFilePath);
-  const testExt = path.extname(testFilePath);
-
-  // Determine source extensions based on test file extension
-  let sourceExtensions: string[] = [];
-  if (testExt === ".js" || testExt === ".mjs" || testExt === ".cjs") {
-    sourceExtensions = [".js", ".jsx", ".mjs", ".cjs"];
-  } else if (testExt === ".ts" || testExt === ".tsx") {
-    sourceExtensions = [".ts", ".tsx"];
+  const config = findLanguageConfig(testFilePath);
+  if (!config) {
+    return null;
   }
 
-  // Exclude common directories that shouldn't be searched
-  const excludePattern =
-    "**/{node_modules,dist,build,.git,.vscode,coverage}/**";
+  const baseName = getBaseNameFromFile(
+    testFilePath,
+    config,
+    config.testPatterns
+  );
 
-  // Search the entire workspace using glob patterns
-  for (const ext of sourceExtensions) {
-    const pattern = `**/${baseName}${ext}`;
+  // Search for all source patterns in the config
+  for (const sourcePattern of config.sourcePatterns) {
+    const pattern = `**/${baseName}${sourcePattern}`;
     const files = await vscode.workspace.findFiles(
       pattern,
-      excludePattern,
+      EXCLUDE_FILE_PATTERN,
       1 // Limit to 1 result for performance
     );
 
@@ -149,18 +160,15 @@ export async function findSourceFile(
  */
 async function jumpToTestOrSource() {
   const editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    vscode.window.showWarningMessage("No active editor");
-    return;
-  }
+  if (!editor) return;
 
   const currentFile = editor.document.uri.fsPath;
 
-  // Skip if file is not a JavaScript/TypeScript file
-  const ext = path.extname(currentFile);
-  if (![".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"].includes(ext)) {
-    vscode.window.showWarningMessage(
-      "Current file is not a JavaScript or TypeScript file"
+  // Check if file matches any language config
+  const config = findLanguageConfig(currentFile);
+  if (!config) {
+    displayMessage(
+      `${path.basename(currentFile)} does not have a supported file type`
     );
     return;
   }
@@ -171,7 +179,7 @@ async function jumpToTestOrSource() {
     // We're in a test file, find the source file
     targetFile = await findSourceFile(currentFile);
     if (!targetFile) {
-      vscode.window.showWarningMessage(
+      displayMessage(
         `Could not find source file for ${path.basename(currentFile)}`
       );
       return;
@@ -180,7 +188,7 @@ async function jumpToTestOrSource() {
     // We're in a source file, find the test file
     targetFile = await findTestFile(currentFile);
     if (!targetFile) {
-      vscode.window.showWarningMessage(
+      displayMessage(
         `Could not find test file for ${path.basename(currentFile)}`
       );
       return;
@@ -190,6 +198,14 @@ async function jumpToTestOrSource() {
   // Open the target file
   const document = await vscode.workspace.openTextDocument(targetFile);
   await vscode.window.showTextDocument(document);
+}
+
+function displayMessage(message: string) {
+  const statusBarMsg = vscode.window.setStatusBarMessage(
+    "Hop to Test: " + message
+  );
+
+  setTimeout(() => statusBarMsg.dispose(), 5000);
 }
 
 export function activate(context: vscode.ExtensionContext) {
