@@ -25,19 +25,58 @@ This extension is available in the [Visual Studio Marketplace](https://marketpla
 2. Press `Ctrl+Shift+T` (or `Cmd+Shift+T` on macOS) to hop to the corresponding test/source file
 3. Alternatively, use the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and search for "Hop to Test/Source"
 
-## Supported Patterns
+## Configuration
 
-### Source Files
+The extension supports configuration via the `hopToTest` section in the `settings.json` file. The following settings are available:
 
-- `Component.jsx` → `Component.test.js` or `Component.test.jsx`
-- `useHook.ts` → `useHook.test.ts`
-- `MyComponent.js` → `MyComponent.test.js` or `MyComponent.spec.js`
+- `languageConfigs`: An array of language configuration objects. Each object defines the supported language file/test patterns for a given language.
+- `excludeFilePattern`: A glob pattern to exclude files from the search when finding related test/source files.
 
-### Test Files
+### Language Configs
 
-- `Component.test.js` → `Component.js` or `Component.jsx`
-- `useHook.test.ts` → `useHook.ts` or `useHook.tsx`
-- `MyComponent.spec.js` → `MyComponent.js` or `MyComponent.jsx`
+The `languageConfigs` array defines the supported language file/test patterns. Each configuration entry creates a bidirectional mapping: when you're in any file matching `sourcePatterns`, you can hop to any file matching `testPatterns` (and vice versa). The extension extracts the base filename and searches for matches across all patterns in the group.
+
+For example, with `.js` and `.test.js` in the same config, opening `Component.js` will find `Component.test.js`, and opening `Component.test.js` will find `Component.js`.
+
+Add different language configs for different languages.
+
+#### Default language configs
+
+By default, I've built in support for JavaScript/TypeScript (and React, Vue, etc.), and Ruby:
+
+```json
+{
+  "hopToTest": {
+    "languageConfigs": [
+      {
+        "sourcePatterns": ".js, .jsx, .ts, .tsx, .mjs, .cjs, .vue",
+        "testPatterns": ".test.js, .test.jsx, .test.ts, .test.tsx, .spec.js, .spec.jsx, .spec.ts, .spec.tsx"
+      },
+      {
+        "sourcePatterns": ".rb",
+        "testPatterns": "_test.rb, _spec.rb"
+      }
+    ]
+  }
+}
+```
+
+### Exclude File Patterns
+
+The `excludeFilePattern` setting is a glob pattern that is used to exclude files from the search when finding related test/source files.
+The `excludeFilePattern` setting can be used to exclude files from the search when finding related test/source files.
+
+#### Default exclude file pattern
+
+By default, the extension will exclude files in the `node_modules`, `dist`, `build`, `.git`, `.vscode`, and `coverage` directories:
+
+```json
+{
+  "hopToTest": {
+    "excludeFilePattern": "**/{node_modules,dist,build,.git,.vscode,coverage}/**"
+  }
+}
+```
 
 ## Development
 

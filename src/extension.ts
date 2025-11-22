@@ -22,12 +22,9 @@ export function findLanguageConfig(filePath: string): LanguageConfig | null {
   const fileName = path.basename(filePath).toLowerCase();
 
   // Get the user-configurable language configuration entries and convert them to LanguageConfig[]
-  let userSettingConfigEntries = vscode.workspace
+  const userSettingConfigEntries = (vscode.workspace
     .getConfiguration("hopToTest")
-    .get("languageConfigs") as LanguageConfigEntry[] | undefined;
-
-  // ensure userSettingConfigEntries is an array
-  userSettingConfigEntries = userSettingConfigEntries || [];
+    .get("languageConfigs") || []) as LanguageConfigEntry[];
 
   const languageConfigs = userSettingConfigEntries.map(
     (entry: LanguageConfigEntry) => {
@@ -188,9 +185,9 @@ async function jumpToTestOrSource() {
 
   const currentFile = editor.document.uri.fsPath;
 
-  const excludeFilePattern = vscode.workspace
+  const excludeFilePattern = (vscode.workspace
     .getConfiguration("hopToTest")
-    .get("excludeFilePattern") as string;
+    .get("excludeFilePattern") || "") as string;
 
   // Check if file matches any language config
   const config = findLanguageConfig(currentFile);

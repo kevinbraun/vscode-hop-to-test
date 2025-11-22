@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.0] - 2025-11-22
+
+### Added
+
+- User configurable language configs and exclude file patterns in editor settings.
+
+### Fixed
+
+- Fixes [#3](https://github.com/kevinbraun/vscode-hop-to-test/issues/3) - Add support for user-configurable language configs
+
 ## [0.2.0] - 2025-11-16
 
 ### Added
@@ -18,5 +28,6 @@
 - Command to hop between source files and their related test files - specifically for JS/TS for the time being
 - Default keyboard shortcut (Ctrl+Shift+T / Cmd+Shift+T) to trigger the hop command
 
+[1.0.0]: https://github.com/kevinbraun/vscode-hop-to-test/releases/tag/v1.0.0
 [0.2.0]: https://github.com/kevinbraun/vscode-hop-to-test/releases/tag/v0.2.0
 [0.1.0]: https://github.com/kevinbraun/vscode-hop-to-test/releases/tag/v0.1.0

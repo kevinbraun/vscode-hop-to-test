@@ -1,6 +1,6 @@
 {
   "name": "hop-to-test",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "displayName": "Hop to Test",
   "description": "Quickly hop between source files and their related test files",
   "publisher": "kbraun",
@@ -91,6 +91,10 @@
             {
               "sourcePatterns": ".js, .jsx, .ts, .tsx, .mjs, .cjs, .vue",
               "testPatterns": ".test.js, .test.jsx, .test.ts, .test.tsx, .spec.js, .spec.jsx, .spec.ts, .spec.tsx"
+            },
+            {
+              "sourcePatterns": ".rb",
+              "testPatterns": "_test.rb, _spec.rb"
             }
           ]
         }
