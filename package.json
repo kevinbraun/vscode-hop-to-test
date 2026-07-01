@@ -34,11 +34,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:javascript",
-    "onLanguage:javascriptreact",
-    "onLanguage:typescript",
-    "onLanguage:typescriptreact",
-    "onLanguage:vue"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
