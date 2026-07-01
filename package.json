@@ -1,6 +1,6 @@
 {
   "name": "hop-to-test",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "Hop to Test",
   "description": "Quickly hop between source files and their related test files",
   "publisher": "kbraun",
@@ -34,11 +34,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:javascript",
-    "onLanguage:javascriptreact",
-    "onLanguage:typescript",
-    "onLanguage:typescriptreact",
-    "onLanguage:vue"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {

@@ -16,10 +16,34 @@ export interface LanguageConfigEntry {
 }
 
 /**
+ * Finds the longest pattern that matches the end of a filename.
+ * Prefers more specific suffixes (e.g. ".svelte.test.js" over ".test.js").
+ */
+export function findLongestMatchingPattern(
+  fileName: string,
+  patterns: string[]
+): string | null {
+  const fileNameLower = fileName.toLowerCase();
+  let longestMatch: string | null = null;
+
+  for (const pattern of patterns) {
+    const patternLower = pattern.toLowerCase();
+    if (
+      fileNameLower.endsWith(patternLower) &&
+      (!longestMatch || pattern.length > longestMatch.length)
+    ) {
+      longestMatch = pattern;
+    }
+  }
+
+  return longestMatch;
+}
+
+/**
  * Finds the language configuration that matches a given file path
  */
 export function findLanguageConfig(filePath: string): LanguageConfig | null {
-  const fileName = path.basename(filePath).toLowerCase();
+  const fileName = path.basename(filePath);
 
   // Get the user-configurable language configuration entries and convert them to LanguageConfig[]
   const userSettingConfigEntries = (vscode.workspace
@@ -39,23 +63,22 @@ export function findLanguageConfig(filePath: string): LanguageConfig | null {
     }
   ) as LanguageConfig[];
 
+  let bestConfig: LanguageConfig | null = null;
+  let bestMatchLength = 0;
+
   for (const config of languageConfigs) {
-    // Check if file matches any source pattern
-    const matchesSource = config.sourcePatterns.some((pattern) => {
-      return fileName.endsWith(pattern.toLowerCase());
-    });
+    const match = findLongestMatchingPattern(fileName, [
+      ...config.sourcePatterns,
+      ...config.testPatterns,
+    ]);
 
-    // Check if file matches any test pattern
-    const matchesTest = config.testPatterns.some((pattern) => {
-      return fileName.endsWith(pattern.toLowerCase());
-    });
-
-    if (matchesSource || matchesTest) {
-      return config;
+    if (match && match.length > bestMatchLength) {
+      bestMatchLength = match.length;
+      bestConfig = config;
     }
   }
 
-  return null;
+  return bestConfig;
 }
 
 /**
@@ -91,17 +114,10 @@ export function getBaseNameFromFile(
   }
 
   const fileName = path.basename(filePath);
-  const fileNameLower = fileName.toLowerCase();
+  const pattern = findLongestMatchingPattern(fileName, patterns);
 
-  // Try each pattern to extract the base name
-  for (const pattern of patterns) {
-    const patternLower = pattern.toLowerCase();
-
-    // For source patterns (like .js), they're at the end, so use endsWith
-    // This ensures we match the last occurrence, not the first
-    if (fileNameLower.endsWith(patternLower)) {
-      return fileName.substring(0, fileName.length - pattern.length);
-    }
+  if (pattern) {
+    return fileName.substring(0, fileName.length - pattern.length);
   }
 
   // Fallback: return filename without extension
